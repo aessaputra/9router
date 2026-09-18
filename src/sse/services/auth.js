@@ -19,35 +19,6 @@ function githubMonthlyResetMs(status, errorText, provider) {
 }
 
 /**
- * Build the virtual keyless connection for no-auth free providers
- * (with optional proxy pool from settings).
- */
-async function virtualNoAuthConnection(settings, providerId) {
-  const override = (settings.providerStrategies || {})[providerId] || {};
-  const strategy = override.rotateStrategy || "none";
-  let pickedId = override.proxyPoolId || null;
-  if (strategy !== "none") {
-    const allPools = await getProxyPools({ isActive: true });
-    const poolIds = allPools.filter(p => p.proxyUrl).map(p => p.id);
-    pickedId = pickProxyPoolId(poolIds, strategy, providerId);
-  }
-  const resolvedProxy = await resolveConnectionProxyConfig({ proxyPoolId: pickedId || "" });
-  return {
-    id: "noauth",
-    connectionName: "Public",
-    isActive: true,
-    accessToken: "public",
-    providerSpecificData: {
-      connectionProxyEnabled: resolvedProxy.connectionProxyEnabled,
-      connectionProxyUrl: resolvedProxy.connectionProxyUrl,
-      connectionNoProxy: resolvedProxy.connectionNoProxy,
-      connectionProxyPoolId: resolvedProxy.proxyPoolId || null,
-      vercelRelayUrl: resolvedProxy.vercelRelayUrl || "",
-    },
-  };
-}
-
-/**
  * Get provider credentials from localDb
  * Filters out unavailable accounts and returns the selected account based on strategy
  * @param {string} provider - Provider name
@@ -72,23 +43,30 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     const providerId = resolveProviderId(provider);
 
     // Inject a virtual connection for no-auth free providers (with optional proxy pool from settings)
-    // Exception: opencode now requires a personal Zen key (https://opencode.ai/auth) on
-    // gated endpoints, so a user-stored connection takes precedence over keyless "public".
     if (FREE_PROVIDERS[providerId]?.noAuth) {
-      if (providerId === "opencode") {
-        const stored = await getProviderConnections({ provider: providerId, isActive: true });
-        const hasRealKey = stored.some((c) => {
-          const key = c.accessToken || c.apiKey || "";
-          return typeof key === "string" && key.trim() && key.trim().toLowerCase() !== "public";
-        });
-        if (hasRealKey) {
-          log.debug("AUTH", "opencode | stored Zen key found — use account selection instead of public");
-        } else {
-          return virtualNoAuthConnection(await getSettings(), providerId);
-        }
-      } else {
-        return virtualNoAuthConnection(await getSettings(), providerId);
+      const settings = await getSettings();
+      const override = (settings.providerStrategies || {})[providerId] || {};
+      const strategy = override.rotateStrategy || "none";
+      let pickedId = override.proxyPoolId || null;
+      if (strategy !== "none") {
+        const allPools = await getProxyPools({ isActive: true });
+        const poolIds = allPools.filter(p => p.proxyUrl).map(p => p.id);
+        pickedId = pickProxyPoolId(poolIds, strategy, providerId);
       }
+      const resolvedProxy = await resolveConnectionProxyConfig({ proxyPoolId: pickedId || "" });
+      return {
+        id: "noauth",
+        connectionName: "Public",
+        isActive: true,
+        accessToken: "public",
+        providerSpecificData: {
+          connectionProxyEnabled: resolvedProxy.connectionProxyEnabled,
+          connectionProxyUrl: resolvedProxy.connectionProxyUrl,
+          connectionNoProxy: resolvedProxy.connectionNoProxy,
+          connectionProxyPoolId: resolvedProxy.proxyPoolId || null,
+          vercelRelayUrl: resolvedProxy.vercelRelayUrl || "",
+        },
+      };
     }
 
     const connections = await getProviderConnections({ provider: providerId, isActive: true });
@@ -285,7 +263,7 @@ export async function markAccountUnavailable(connectionId, status, errorText, pr
   }
   if (!shouldFallback) return { shouldFallback: false, cooldownMs: 0 };
 
-  const reason = typeof errorText === "string" ? errorText.slice(0, 100) : "Provider error";
+  const reason = typeof errorText === "string" ? errorText.slice(0, 200) : "Provider error";
   const lockUpdate = buildModelLockUpdate(githubResetAtMs ? null : model, cooldownMs);
 
   await updateProviderConnection(connectionId, {

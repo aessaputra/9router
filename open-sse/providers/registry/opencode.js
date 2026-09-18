@@ -9,29 +9,25 @@ export default {
     icon: "terminal",
     color: "#E87040",
     textIcon: "OC",
-    notice: {
-      apiKeyUrl: "https://opencode.ai/auth",
-      text: "OpenCode Zen now requires a personal API key on gated endpoints (chat + responses). Create one at opencode.ai/auth, then add it as a connection or set OPENCODE_API_KEY. Without a key, requests fall back to keyless \"public\" and upstream returns 401/403.",
-    },
   },
   category: "free",
   noAuth: true,
   transport: {
     baseUrl: "https://opencode.ai",
-    // Upstream free-tier gate rejects stream:false with 403 FreeTierError
-    // (verified live). Force SSE upstream; chatCore converts back to JSON
-    // for non-streaming clients via the existing forced-SSE path.
-    forceStream: true,
     headers: {
       "x-opencode-client": "desktop",
     },
+    forceStream: true,
     noAuth: true,
+    quirks: {
+      forceAutoToolChoiceModels: ["muse-spark-1.3-contributor-free"],
+    },
   },
   models: [
-    // Muse Spark models are served by /zen/v1/responses; the rest stay on
-    // /chat/completions, so the format is declared per-model, not per-provider.
+    // Endpoint formats differ per model, so declare non-chat models explicitly.
     { id: "muse-spark-1.2-contributor-free", name: "Muse Spark 1.2 Contributor Free", targetFormat: "openai-responses" },
     { id: "muse-spark-1.3-contributor-free", name: "Muse Spark 1.3 Contributor Free", targetFormat: "openai-responses" },
+    { id: "union-alpha", name: "Union Alpha Free", targetFormat: "claude" },
   ],
   modelsFetcher: { url: "https://opencode.ai/zen/v1/models", type: "opencode-free" },
   passthroughModels: true,
