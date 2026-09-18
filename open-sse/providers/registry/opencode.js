@@ -9,11 +9,19 @@ export default {
     icon: "terminal",
     color: "#E87040",
     textIcon: "OC",
+    notice: {
+      apiKeyUrl: "https://opencode.ai/auth",
+      text: "OpenCode Zen now requires a personal API key on gated endpoints (chat + responses). Create one at opencode.ai/auth, then add it as a connection or set OPENCODE_API_KEY. Without a key, requests fall back to keyless \"public\" and upstream returns 401/403.",
+    },
   },
   category: "free",
   noAuth: true,
   transport: {
     baseUrl: "https://opencode.ai",
+    // Upstream free-tier gate rejects stream:false with 403 FreeTierError
+    // (verified live). Force SSE upstream; chatCore converts back to JSON
+    // for non-streaming clients via the existing forced-SSE path.
+    forceStream: true,
     headers: {
       "x-opencode-client": "desktop",
     },
