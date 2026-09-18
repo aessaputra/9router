@@ -50,6 +50,13 @@ jobs:
           sbom: false
 
       - name: Trigger Coolify deployment
+        env:
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
-          curl --fail --request GET '${{ secrets.COOLIFY_WEBHOOK }}' \
-            --header 'Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}'
+          if [ -z "$COOLIFY_WEBHOOK" ]; then
+            echo "COOLIFY_WEBHOOK secret not set; skipping deploy trigger."
+            exit 0
+          fi
+          curl --fail-with-body --request POST "$COOLIFY_WEBHOOK" \
+            --header "Authorization: Bearer $COOLIFY_TOKEN"
