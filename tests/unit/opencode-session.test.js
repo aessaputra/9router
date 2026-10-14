@@ -171,25 +171,25 @@ describe("OpenCode Free Executor Session Resolution", () => {
 });
 
 describe("OpenCode Free User-Agent Validation", () => {
-  it("defaults User-Agent to opencode/1.19.0 for non-opencode downstream clients", () => {
+  it("defaults User-Agent to opencode/1.18.31 for non-opencode downstream clients", () => {
     const executor = getExecutor("opencode");
     const headersNoUa = executor.buildHeaders({});
-    expect(headersNoUa["User-Agent"]).toBe("opencode/1.19.0");
+    expect(headersNoUa["User-Agent"]).toBe("opencode/1.18.31");
 
     const headersClaude = executor.buildHeaders({ rawHeaders: { "user-agent": "Claude-Code/1.0" } });
-    expect(headersClaude["User-Agent"]).toBe("opencode/1.19.0");
+    expect(headersClaude["User-Agent"]).toBe("opencode/1.18.31");
   });
 
-  it("replaces bare opencode with versioned opencode/1.19.0 to prevent 403 FreeTierError", () => {
+  it("replaces bare opencode with versioned opencode/1.18.31 to prevent 403 FreeTierError", () => {
     const executor = getExecutor("opencode");
     const headers = executor.buildHeaders({ rawHeaders: { "user-agent": "opencode" } });
-    expect(headers["User-Agent"]).toBe("opencode/1.19.0");
+    expect(headers["User-Agent"]).toBe("opencode/1.18.31");
   });
 
   it("upgrades outdated opencode versions (< 1.17) to prevent 426 Upgrade Required", () => {
     const executor = getExecutor("opencode");
     const headers = executor.buildHeaders({ rawHeaders: { "user-agent": "opencode/1.15.0" } });
-    expect(headers["User-Agent"]).toBe("opencode/1.19.0");
+    expect(headers["User-Agent"]).toBe("opencode/1.18.31");
   });
 
   it("preserves valid opencode versions (>= 1.17)", () => {
@@ -277,7 +277,7 @@ describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
     expect(second).toBe(first);
   });
 
-  it("applies the full lowercase free-tier fingerprint tools", () => {
+  it("applies the full lowercase free-tier fingerprint quartet", () => {
   const executor = getExecutor("opencode");
 
   const chatNoTools = executor.transformRequest("nemotron-3-ultra-free", {
@@ -286,8 +286,7 @@ describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
   expect(chatNoTools.stream).toBe(true);
   expect(chatNoTools.tool_choice).toBe("none");
   expect(chatNoTools.tools.map((t) => t.function?.name)).toEqual([
-    "bash", "edit", "glob", "grep", "read",
-    "skill", "task", "todowrite", "webfetch", "write",
+    "bash", "glob", "grep", "read",
   ]);
 
   const chatWithTools = executor.transformRequest("nemotron-3-ultra-free", {
@@ -301,10 +300,8 @@ describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
     tool_choice: "auto",
   });
   expect(chatWithTools.tool_choice).toBe("auto");
-  // Existing tools normalized first, then missing ones appended
   expect(chatWithTools.tools.map((t) => t.function?.name)).toEqual([
     "bash", "glob", "grep", "read",
-    "edit", "skill", "task", "todowrite", "webfetch", "write",
   ]);
 
   const chatPartial = executor.transformRequest("nemotron-3-ultra-free", {
@@ -314,10 +311,8 @@ describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
       { type: "function", function: { name: "read", description: "existing" } },
     ],
   });
-  // When client provides partial tools, only missing ones are appended
   expect(chatPartial.tools.map((t) => t.function?.name)).toEqual([
-    "bash", "read", "edit", "glob", "grep",
-    "skill", "task", "todowrite", "webfetch", "write",
+    "bash", "read", "glob", "grep",
   ]);
   expect(chatPartial.tools[0].function.description).toBe("existing");
 });
