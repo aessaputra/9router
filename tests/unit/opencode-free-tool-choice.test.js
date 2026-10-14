@@ -36,7 +36,8 @@ describe("opencode Free 1.3 tool_choice auto-only", () => {
       const body = responsesBody(model, structuredClone(choice));
       const out = new OpenCodeExecutor().transformRequest(model, body, true, CREDS);
       expect(out.tool_choice).toBe("auto");
-      expect(out.tools).toEqual(TOOLS);
+      // Client tool preserved, fingerprint tools appended
+      expect(out.tools[0]).toEqual(TOOLS[0]);
       expect(out.input).toEqual(INPUT);
     }
   });
@@ -46,14 +47,17 @@ describe("opencode Free 1.3 tool_choice auto-only", () => {
       FREE_13, responsesBody(FREE_13, "auto"), true, CREDS,
     );
     expect(autoOut.tool_choice).toBe("auto");
-    expect(autoOut.tools).toEqual(TOOLS);
+    // Client tool preserved, fingerprint tools appended
+    expect(autoOut.tools[0]).toEqual(TOOLS[0]);
     expect(autoOut.input).toEqual(INPUT);
 
     const absentOut = new OpenCodeExecutor().transformRequest(
       FREE_13, responsesBody(FREE_13, undefined), true, CREDS,
     );
-    expect("tool_choice" in absentOut).toBe(false);
-    expect(absentOut.tools).toEqual(TOOLS);
+    // When tool_choice is absent, fingerprint tools injection sets it to "auto"
+    expect(absentOut.tool_choice).toBe("auto");
+    // Client tool preserved, fingerprint tools appended
+    expect(absentOut.tools[0]).toEqual(TOOLS[0]);
     expect(absentOut.input).toEqual(INPUT);
   });
 
@@ -84,7 +88,8 @@ describe("opencode Free 1.3 tool_choice auto-only", () => {
     const sent = JSON.parse(actualInit.body);
     expect(sent.tool_choice).toBe("auto");
     expect(sent.model).toBe(FREE_13);
-    expect(sent.tools).toEqual(TOOLS);
+    // Client tool preserved, fingerprint tools appended
+    expect(sent.tools[0]).toEqual(TOOLS[0]);
     expect(sent.input).toEqual(INPUT);
   });
 });

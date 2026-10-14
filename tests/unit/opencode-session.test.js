@@ -277,7 +277,7 @@ describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
     expect(second).toBe(first);
   });
 
-  it("applies the full lowercase free-tier fingerprint quartet", () => {
+  it("applies the full lowercase free-tier fingerprint tools", () => {
   const executor = getExecutor("opencode");
 
   const chatNoTools = executor.transformRequest("nemotron-3-ultra-free", {
@@ -286,7 +286,8 @@ describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
   expect(chatNoTools.stream).toBe(true);
   expect(chatNoTools.tool_choice).toBe("none");
   expect(chatNoTools.tools.map((t) => t.function?.name)).toEqual([
-    "bash", "glob", "grep", "read",
+    "bash", "edit", "glob", "grep", "read",
+    "skill", "task", "todowrite", "webfetch", "write",
   ]);
 
   const chatWithTools = executor.transformRequest("nemotron-3-ultra-free", {
@@ -300,8 +301,10 @@ describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
     tool_choice: "auto",
   });
   expect(chatWithTools.tool_choice).toBe("auto");
+  // Existing tools normalized first, then missing ones appended
   expect(chatWithTools.tools.map((t) => t.function?.name)).toEqual([
     "bash", "glob", "grep", "read",
+    "edit", "skill", "task", "todowrite", "webfetch", "write",
   ]);
 
   const chatPartial = executor.transformRequest("nemotron-3-ultra-free", {
@@ -311,8 +314,10 @@ describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
       { type: "function", function: { name: "read", description: "existing" } },
     ],
   });
+  // When client provides partial tools, only missing ones are appended
   expect(chatPartial.tools.map((t) => t.function?.name)).toEqual([
-    "bash", "read", "glob", "grep",
+    "bash", "read", "edit", "glob", "grep",
+    "skill", "task", "todowrite", "webfetch", "write",
   ]);
   expect(chatPartial.tools[0].function.description).toBe("existing");
 });

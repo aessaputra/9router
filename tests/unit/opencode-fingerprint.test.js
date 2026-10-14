@@ -14,15 +14,17 @@ const flat = (names) => names.map((name) => ({ type: "function", name }));
 const chat = (names) => names.map((name) => ({ type: "function", function: { name } }));
 
 describe("opencodeFingerprint — request side", () => {
-  it("renames capitalised quartet members to lowercase", () => {
+  it("renames capitalised fingerprint tools to lowercase", () => {
     const body = { tools: flat(CC_TOOLS) };
     const map = applyFingerprintTools(body, true);
     const names = body.tools.map((tool) => tool.name);
 
     expect(names).toContain("bash");
     expect(names).not.toContain("Bash");
-    expect(names).toContain("Edit");
+    expect(names).toContain("edit");
+    expect(names).not.toContain("Edit");
     expect(map.get("bash")).toBe("Bash");
+    expect(map.get("edit")).toBe("Edit");
   });
 
   it("removes quartet case duplicates without dropping unrelated case variants", () => {
@@ -35,10 +37,13 @@ describe("opencodeFingerprint — request side", () => {
     expect(names).toContain("foo");
   });
 
-  it("preserves tool count when a complete quartet is only renamed", () => {
+  it("appends missing fingerprint tools when client provides partial set", () => {
     const body = { tools: flat(CC_TOOLS) };
     applyFingerprintTools(body, true);
-    expect(body.tools).toHaveLength(CC_TOOLS.length);
+    // CC_TOOLS contains 8 fingerprint tools (with different casing): Task, Bash, Glob, Grep, Read, Edit, Write, WebFetch
+    // After normalization, only 2 are missing: skill, todowrite
+    // Total: 10 fingerprint tools
+    expect(body.tools).toHaveLength(10);
   });
 
   it("handles the nested chat shape without dropping .function", () => {
@@ -73,7 +78,7 @@ describe("opencodeFingerprint — request side", () => {
     expect(body.tool_choice).toBeUndefined();
   });
 
-  it("appends only genuinely missing quartet members", () => {
+  it("appends only genuinely missing fingerprint tools", () => {
     const body = { tools: flat(["Bash", "Read", "terminal"]) };
     applyFingerprintTools(body, true);
 
@@ -81,7 +86,9 @@ describe("opencodeFingerprint — request side", () => {
     expect(names).toContain("glob");
     expect(names).toContain("grep");
     expect(names).toContain("terminal");
-    expect(body.tools).toHaveLength(5);
+    // 3 client tools + 8 missing fingerprint tools (edit, glob, grep, skill, task, todowrite, webfetch, write)
+    // Note: bash and read already provided by client
+    expect(body.tools).toHaveLength(11);
   });
 
   it("retargets flat tool_choice that points at a renamed tool", () => {
@@ -179,12 +186,13 @@ describe("opencodeFingerprint — response side", () => {
 });
 
 describe("fingerprintToolKey", () => {
-  it("maps quartet case/whitespace variants and rejects other tools", () => {
+  it("maps fingerprint tool case/whitespace variants and rejects other tools", () => {
     expect(fingerprintToolKey("Bash")).toBe("bash");
     expect(fingerprintToolKey(" bash ")).toBe("bash");
     expect(fingerprintToolKey("GLOB")).toBe("glob");
     expect(fingerprintToolKey("Read")).toBe("read");
-    expect(fingerprintToolKey("Edit")).toBe("");
+    expect(fingerprintToolKey("Edit")).toBe("edit");
+    expect(fingerprintToolKey("WRITE")).toBe("write");
     expect(fingerprintToolKey("terminal")).toBe("");
     expect(fingerprintToolKey(null)).toBe("");
   });

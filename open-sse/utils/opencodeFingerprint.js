@@ -8,8 +8,14 @@
  * original spelling so downstream clients still recognise their own tool calls.
  */
 
-/** Canonical names required by the upstream free-tier gate. */
-export const OPENCODE_FINGERPRINT_TOOLS = ["bash", "glob", "grep", "read"];
+/** Canonical names required by the upstream free-tier gate.
+ * Updated 2026-10-14: upstream now requires 10 tools for free-tier fingerprint.
+ * See: https://github.com/decolua/9router/issues/4836
+ */
+export const OPENCODE_FINGERPRINT_TOOLS = [
+  "bash", "edit", "glob", "grep", "read",
+  "skill", "task", "todowrite", "webfetch", "write"
+];
 
 // Request body -> names renamed for that request. transformRequest() mutates the
 // same body object that chatCore passed into the executor, so a WeakMap keeps the
